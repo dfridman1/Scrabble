@@ -5,7 +5,7 @@ module Main where
 
 import           Scrabble.Dictionary    (Dictionary, makeDictionary)
 import           Scrabble.Scrabble      (fromBonusBoard)
-import           Scrabble.ScrabbleAI    (showScrabble)
+import           Scrabble.ScrabbleAI    (showScrabbleIO)
 import           Scrabble.ScrabbleParse (readBonusBoard)
 
 
@@ -48,4 +48,4 @@ main = do
   case readBonusBoard bonusBoardStr of
    Left err -> putStrLn err
    Right b  -> let board = fromBonusBoard b in
-                showScrabble d board b >>= putStrLn
+                showScrabbleIO d board b >>= putStrLn

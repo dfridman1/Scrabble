@@ -1,7 +1,9 @@
 module Scrabble.ScrabbleAI
        (
          playScrabble,
-         showScrabble
+         playScrabbleIO,
+         showScrabble,
+         showScrabbleIO
        ) where
 
 
@@ -18,36 +20,47 @@ import           System.Random           (StdGen, newStdGen)
 
 
 
-showScrabble :: Dictionary -> Board -> BonusBoard -> IO String
-showScrabble d b bB = fmap (showTransitions bB) . playScrabble d b $ bB
+
+showScrabbleIO :: Dictionary -> Board -> BonusBoard -> IO String
+showScrabbleIO d b bB = newStdGen >>= \g -> return $ showScrabble g d b $ bB
+
+
+showScrabble :: StdGen -> Dictionary -> Board -> BonusBoard -> String
+showScrabble g d b bB = showTransitions bB . playScrabble g d b $ bB
+
+
+playScrabbleIO :: Dictionary -> Board -> BonusBoard -> IO [(Play, Board)]
+playScrabbleIO d b bB = newStdGen >>= \g -> return $ playScrabble g d b bB
+
+
+playScrabble :: StdGen -> Dictionary -> Board -> BonusBoard -> [(Play, Board)]
+playScrabble g d b bB = let ((hand, t), gen) = initialHand g tiles in
+                         playScrabbleHelper gen d b bB hand t
+
+
+playScrabbleHelper :: StdGen -> Dictionary -> Board -> BonusBoard -> Hand -> Tiles -> [(Play, Board)]
+playScrabbleHelper g d b bB h t = case bestPlayState d b bB $ h of
+                                   Nothing -> []
+                                   Just (play, remHand) -> let board                = play `updateBoard` b
+                                                               ((hand, tiles), gen) = drawHand g t remHand in
+                                                            (play, board): playScrabbleHelper gen d board bB hand tiles
 
 
 
-playScrabble :: Dictionary -> Board -> BonusBoard -> IO [(Play, Board)]
-playScrabble d b bB = drawHand tiles [] >>= \(h, t) -> playScrabbleHelper d b bB h $ t
+initialHand :: StdGen -> Tiles -> ((Hand, Tiles), StdGen)
+initialHand g t = drawHand g t []
 
 
 
-playScrabbleHelper :: Dictionary -> Board -> BonusBoard -> Hand -> Tiles -> IO [(Play, Board)]
-playScrabbleHelper d b bB h t = case bestPlayState d b bB $ h of
-                                 Nothing              -> return []
-                                 Just (play, remHand) -> let board = play `updateBoard` b in
-                                                          do
-                                                            (hand, tiles) <- t `drawHand` remHand
-                                                            rest <- playScrabbleHelper d board bB hand tiles
-                                                            return $ (play, board): rest
+drawHand :: StdGen -> Tiles -> Hand -> ((Hand, Tiles), StdGen)
+drawHand gen tiles hand = f $ randomHand gen n tiles
+    where f ((h, t), newgen) = ((hand ++ h, t), newgen)
+          n                  = min (7 - length hand) (length tiles)
 
 
-drawHand :: Tiles -> Hand -> IO (Hand, Tiles)
-drawHand tiles hand = newStdGen >>= \gen -> return . f . randomHand gen n $ tiles
-    where f (h, t) = (hand ++ h, t)
-          n        = min (7 - length hand) (length tiles)
-
-
-
-randomHand :: StdGen -> Int -> Tiles -> (Hand, Tiles)
-randomHand gen n tiles = let hand = sample gen n tiles in
-                          (hand, tiles `removeMany` hand)
+randomHand :: StdGen -> Int -> Tiles -> ((Hand, Tiles), StdGen)
+randomHand gen n tiles = let (hand, newgen) = sample gen n tiles in
+                          ((hand, tiles `removeMany` hand), newgen)
 
 
 

@@ -25,7 +25,7 @@ module Scrabble.Utils
 
 
 
-import           Control.Monad.State.Lazy (evalState)
+import           Control.Monad.State.Lazy (runState)
 import           Data.List                (intercalate)
 import           Data.Random              hiding (sample)
 import qualified Data.Random.Extras       as R
@@ -129,5 +129,5 @@ swap (x, y) = (y, x)
 
 
 
-sample :: StdGen -> Int -> [a] -> [a]
-sample g n xs = evalState (runRVar (R.sample n xs) StdRandom) g
+sample :: StdGen -> Int -> [a] -> ([a], StdGen)
+sample g n xs = runState (runRVar (R.sample n xs) StdRandom) g
